@@ -8,4 +8,4 @@
  */
 
 rootProject.name = 'aosp-ide'
-include('app', 'list', 'utilities')
+include('app', 'assets', 'list', 'utilities')

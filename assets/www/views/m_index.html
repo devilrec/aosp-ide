@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Google's Maven Repository</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Stylesheets -->
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp" nonce="l4BrZb3laUCLe7tDxCBrgg">
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css?family=Google+Sans:400,500|Roboto+Mono|Roboto:300,400,500,700" nonce="l4BrZb3laUCLe7tDxCBrgg">
+  <link rel="stylesheet" href="css/common_styles.css" nonce="l4BrZb3laUCLe7tDxCBrgg">
+  <link rel="stylesheet" href="css/m_styles.css" nonce="l4BrZb3laUCLe7tDxCBrgg">
+  <!-- Scripts -->
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.0/angular.min.js" nonce="l4BrZb3laUCLe7tDxCBrgg"></script>
+  <script src="js/gmaven-index.js" nonce="l4BrZb3laUCLe7tDxCBrgg"></script>
+</head>
+
+<body ng-app="MavenIndex" ng-controller="MavenIndexController as index">
+<div class="flex-container flex-column full-height">
+<!-- Material Design App Bar -->
+<header class="flex-item-fixed">
+  <div class="app-bar">
+    <div class="app-bar-title">Google's Maven Repository</div>
+    <div class="app-bar-icon-container">
+      <div class="app-bar-icons" ng-click="showFeedbackPage()" ng-if="false">
+        <i class="app-bar-icon material-icons-outlined">announcement</i>
+      </div>
+    </div>
+  </div>
+  <!-- Search box for filtering the artifact tree -->
+  <div class="search-box-container" ng-hide="selectedNode.constructor.name === 'VersionNode'">
+      <div class="search-box flex-container">
+        <input class="search-box-input" ng-model="searchTerm" ng-change="setFilter(searchTerm)"
+          placeholder="Search for an artifact...">
+        <i class="search-box-icon material-icons" ng-click="clearFilter()" tabindex="0">
+          {{ !searchTerm ? "search":"close" }}
+        </i>
+      </div>
+  </div>
+</header>
+
+<nav class="content-box">
+  <div class="tree-container" ng-hide="selectedNode.constructor.name === 'VersionNode'">
+    <div class="no-results-found" ng-if="allHidden || displayTree.length==0">
+      <span>(Nothing to show)</span>
+    </div>
+    <!-- Group list -->
+    <div ng-repeat="group in displayTree" ng-if="group.visible && selectedNode.constructor.name !== 'VersionNode'">
+      <div class="indexItem" ng-click="group.select(); group.toggle()" ng-class="{'selected': group.selected}">
+          <span class="material-icons caret"
+                ng-class="{'expand': group.expanded, 'has_child': group.subnode.length}">
+          </span>
+        <span
+            ng-if="group.highlight">{{group.text.slice(0, group.highlight[0])}}<mark>{{group.text.slice(group.highlight[0], group.highlight[1])}}</mark>{{group.text.slice(group.highlight[1])}}</span>
+        <span ng-if="!group.highlight">{{::group.text}}</span>
+      </div>
+      <!-- Artifacts subtree - visible when expanded -->
+      <div style="margin-left:20px" ng-if="group.expanded">
+
+        <!-- Artifact list -->
+        <div ng-repeat="artifact in group.subnode" ng-if="artifact.visible">
+          <div class="indexItem" ng-click="artifact.select(); artifact.toggle()"
+               ng-class="{'selected': artifact.selected}">
+            <span class="material-icons caret has_child"
+                  ng-class="{'expand': artifact.expanded}">
+            </span>
+            <span class="selectable-node" ng-if="artifact.highlight" ng-click="artifact.select()">
+                {{artifact.text.slice(0, artifact.highlight[0])}}<mark>{{artifact.text.slice(artifact.highlight[0], artifact.highlight[1])}}</mark>{{artifact.text.slice(artifact.highlight[1])}}</span>
+            <span class="selectable-node" ng-if="!artifact.highlight"
+                  ng-class="{'selected': artifact.selected}"
+                  ng-click="artifact.select()">{{::artifact.text}}</span>
+          </div>
+          <!-- Versions subtree - visible when expanded -->
+          <div style="margin-left:28px" ng-if="artifact.expanded">
+
+            <!-- Versions list -->
+            <div ng-repeat="version in artifact.subnode">
+              <div class="indexItem" ng-disabled="true" ng-click="version.select()"
+                   ng-class="{'selected': version.selected}">
+                <span class="selectable-node" ng-class="{'selected': version.selected}">
+                    {{::version.text}}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Version details - show the POM file information for the selected group-artifact-version coordinate -->
+  <div class="gav-pom-details" ng-if="selectedNode && selectedNode.model">
+    <div class="gav-pom-table">
+      <div class="content-header" ng-click="selectedArtifactNode.select()">
+        <i class="material-icons back-arrow">
+          keyboard_backspace
+        </i>
+        {{selectedGroupNode.text + '.' + selectedArtifactNode.text + '-' +
+        selectedVersionNode.text}}
+      </div>
+      <div ng-repeat="item in selectedNode.model">
+        <div class="gav-pom-key">{{item.name}}</div>
+        <div ng-switch="item.type" class="gav-pom-value">
+          <span ng-switch-when="text">{{item.value}}</span>
+          <a ng-switch-when="link" href="{{item.value.url}}" target="_blank">
+            {{item.value.text}}
+          </a>
+          <span ng-switch-when="artifacts" ng-repeat="artifact in item.value">
+            <a href="{{artifact.url}}">{{artifact.name}}</a><span ng-if="!$last">,&nbsp;</span>
+          </span>
+          <div ng-switch-when="code" class="gav-pom-value-copyable"
+               title="Click to copy"
+               ng-click="copyTextToClipboard(item.id)">
+            <div id="{{item.id}}">{{item.value}}</div>
+            <i class="material-icons small-icon">content_copy</i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+</div>
+</body>
+
+</html>
